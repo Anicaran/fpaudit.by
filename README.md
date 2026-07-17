@@ -39,8 +39,13 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 ## CI/CD (GitHub Actions)
 
 В репозитории добавлен workflow `.github/workflows/ci-cd-deploy.yml`:
-- `CI`: проверка backend (установка зависимостей + `py_compile`) и сборка frontend (`npm run build`).
-- `CD`: деплой на хостинг-сервер по SSH при push в `main`.
+- `CI`: на каждый push в `main` — проверка backend (`py_compile`) и сборка frontend (`npm run build`).
+- `CD`: **только вручную** (`workflow_dispatch`) и только если в поле confirm ввести `deploy`. Автодеплой на push отключён.
+
+Важно про деплой:
+- Синхронизируется только каталог `fpa-mobile-web/` в `DEPLOY_PATH`.
+- Флаг `rsync --delete` **не используется** (раньше он мог стереть чужие файлы на сервере, если `DEPLOY_PATH` указывал на общий каталог).
+- `DEPLOY_PATH` должен быть отдельной директорией приложения (например `/var/www/proectaudit`), не `/var/www`, не `public_html` и не домашний каталог.
 
 Необходимые GitHub Secrets:
 - `SSH_HOST`

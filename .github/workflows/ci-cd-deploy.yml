@@ -4,7 +4,14 @@ on:
   push:
     branches:
       - main
+  # Deploy is MANUAL ONLY. Do not auto-deploy on push:
+  # a previous rsync --delete against DEPLOY_PATH wiped unrelated server files.
   workflow_dispatch:
+    inputs:
+      confirm_deploy:
+        description: 'Type deploy to run CD (CI always runs on push)'
+        required: true
+        default: ''
 
 jobs:
   ci:
@@ -49,38 +56,114 @@ jobs:
     name: Deploy to Hosting
     runs-on: ubuntu-latest
     needs: ci
-    if: github.ref == 'refs/heads/main'
+    # Never deploy on push. Manual run + explicit confirmation only.
+    if: >
+      github.event_name == 'workflow_dispatch' &&
+      github.event.inputs.confirm_deploy == 'deploy'
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate deploy secrets
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_KEY: ${{ secrets.SSH_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          missing=0
+          for name in SSH_HOST SSH_USER SSH_KEY DEPLOY_PATH; do
+            if [ -z "${!name}" ]; then
+              echo "Missing required secret: $name"
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            exit 1
+          fi
+
+          # Refuse empty / relative / filesystem-root targets. A wrong DEPLOY_PATH
+          # with rsync --delete previously wiped the hosting directory.
+          case "$DEPLOY_PATH" in
+            /|/root|/home|/var|/var/www|/usr|/etc|"")
+              echo "Refusing unsafe DEPLOY_PATH=$DEPLOY_PATH"
+              exit 1
+              ;;
+          esac
+          if [[ "$DEPLOY_PATH" != /* ]]; then
+            echo "DEPLOY_PATH must be an absolute path, got: $DEPLOY_PATH"
+            exit 1
+          fi
+          # Require a project-specific directory name (not a shared parent).
+          base="$(basename "$DEPLOY_PATH")"
+          if [[ "$base" == "www" || "$base" == "html" || "$base" == "public_html" || "$base" == "home" ]]; then
+            echo "DEPLOY_PATH looks like a shared web root ($DEPLOY_PATH). Use a dedicated app directory."
+            exit 1
+          fi
+          echo "DEPLOY_PATH looks acceptable: $DEPLOY_PATH"
+
       - name: Configure SSH key
         env:
           SSH_KEY: ${{ secrets.SSH_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
         run: |
+          set -euo pipefail
           mkdir -p ~/.ssh
           printf '%s\n' "$SSH_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
           touch ~/.ssh/known_hosts
-          ssh-keyscan -p "${{ secrets.SSH_PORT || '22' }}" "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+          port="${SSH_PORT:-22}"
+          ssh-keyscan -p "$port" "$SSH_HOST" >> ~/.ssh/known_hosts
 
       - name: Sync project to server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
-          rsync -az --delete \
-            --exclude ".git" \
-            --exclude "fpa-mobile-web/client/node_modules" \
-            --exclude "fpa-mobile-web/client/dist" \
-            --exclude "fpa-mobile-web/server/.venv" \
-            ./ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.DEPLOY_PATH }}/"
+          set -euo pipefail
+          port="${SSH_PORT:-22}"
+
+          # Sync ONLY the app tree into a dedicated directory.
+          # Do NOT use --delete against a shared hosting root.
+          # Preserve runtime secrets/data that are not in git.
+          rsync -az \
+            -e "ssh -p ${port}" \
+            --exclude ".git/" \
+            --exclude "node_modules/" \
+            --exclude "dist/" \
+            --exclude ".venv/" \
+            --exclude "venv/" \
+            --exclude ".env" \
+            --exclude ".env.*" \
+            --exclude "certs/" \
+            --exclude "*.log" \
+            --exclude "__pycache__/" \
+            ./fpa-mobile-web/ \
+            "${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/"
 
       - name: Build and restart service on server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DEPLOY_RESTART_CMD: ${{ secrets.DEPLOY_RESTART_CMD }}
         run: |
-          ssh -p "${{ secrets.SSH_PORT || '22' }}" "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" << 'EOF'
-          set -e
-          cd "${{ secrets.DEPLOY_PATH }}"
+          set -euo pipefail
+          port="${SSH_PORT:-22}"
+          ssh -p "$port" "${SSH_USER}@${SSH_HOST}" \
+            DEPLOY_PATH="$DEPLOY_PATH" \
+            DEPLOY_RESTART_CMD="$DEPLOY_RESTART_CMD" \
+            bash -s <<'EOF'
+          set -euo pipefail
+          cd "$DEPLOY_PATH"
 
-          cd fpa-mobile-web/client
+          cd client
           npm ci
           npm run build
 
@@ -90,7 +173,7 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-          if [ -n "${{ secrets.DEPLOY_RESTART_CMD }}" ]; then
-            eval "${{ secrets.DEPLOY_RESTART_CMD }}"
+          if [ -n "${DEPLOY_RESTART_CMD:-}" ]; then
+            eval "$DEPLOY_RESTART_CMD"
           fi
           EOF
