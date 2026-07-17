@@ -1,0 +1,6 @@
+examples/*.jpg
+examples/*.png
+examples/*.webp
+__pycache__/
+*.pyc
+.venv/

@@ -1,0 +1,31 @@
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+
+# Local runtime files
+certs/
+*.log
+
+# Large local artifacts (do not publish)
+FP+Audit_27.5_APKPure.xapk
+_xapk.zip
+androguard.db
+_apk_dex/
+_apk_extract/
+_xapk_extract/
+
+# Optional local extracts (uncomment if needed)
+# android-app-extract/

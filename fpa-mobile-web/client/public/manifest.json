@@ -1,0 +1,11 @@
+{
+  "name": "FP Audit Mobile",
+  "short_name": "FP Audit",
+  "description": "Задачи, цены и печать ценников Fix Price",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f5f7",
+  "theme_color": "#e85d04",
+  "orientation": "portrait",
+  "lang": "ru"
+}
