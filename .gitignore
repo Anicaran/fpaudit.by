@@ -19,6 +19,17 @@ dist/
 certs/
 *.log
 
+# SSH keys / secrets — never commit
+fpaudit_actions_key
+fpaudit_actions_key.pub
+authorized_keys
+*_actions_key
+*_actions_key.pub
+*.pem
+id_rsa
+id_ed25519
+id_ed25519.pub
+
 # Large local artifacts (do not publish)
 FP+Audit_27.5_APKPure.xapk
 _xapk.zip
