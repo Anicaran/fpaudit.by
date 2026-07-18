@@ -145,8 +145,21 @@ jobs:
           printf '%s\n' "$SSH_KEY" > "$key_file"
           # Fix Windows-style CRLF if the secret was pasted from a Windows editor.
           sed -i 's/\r$//' "$key_file"
+          # Ensure trailing newline (required by OpenSSH).
+          if [ -n "$(tail -c1 "$key_file" || true)" ]; then
+            printf '\n' >> "$key_file"
+          fi
           chmod 600 "$key_file"
-          printf 'Host *\n  IdentityFile %s\n  IdentitiesOnly yes\n  StrictHostKeyChecking accept-new\n' "$key_file" > ~/.ssh/config
+          if ! ssh-keygen -y -f "$key_file" >/tmp/deploy.pub 2>/tmp/deploy.keyerr; then
+            echo "SSH_KEY secret is not a valid private key:"
+            cat /tmp/deploy.keyerr || true
+            exit 1
+          fi
+          echo "Deploy public key fingerprint (must be in server authorized_keys):"
+          ssh-keygen -lf /tmp/deploy.pub
+          echo "Deploy public key:"
+          cat /tmp/deploy.pub
+          printf 'Host *\n  IdentityFile %s\n  IdentitiesOnly yes\n  PreferredAuthentications publickey\n  PasswordAuthentication no\n  StrictHostKeyChecking accept-new\n' "$key_file" > ~/.ssh/config
           chmod 600 ~/.ssh/config
           ssh-keyscan -p "$DEPLOY_SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
 
@@ -154,7 +167,8 @@ jobs:
         run: |
           set -euo pipefail
           echo "Creating remote path if needed: ${DEPLOY_PATH}"
-          ssh -p "$DEPLOY_SSH_PORT" "${SSH_USER}@${SSH_HOST}" "mkdir -p '${DEPLOY_PATH}' && ls -ld '${DEPLOY_PATH}'"
+          ssh -o BatchMode=yes -p "$DEPLOY_SSH_PORT" "${SSH_USER}@${SSH_HOST}" \
+            "mkdir -p '${DEPLOY_PATH}' && ls -ld '${DEPLOY_PATH}'"
 
       - name: Sync project to server
         run: |
