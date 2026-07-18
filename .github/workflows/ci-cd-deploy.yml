@@ -124,33 +124,46 @@ jobs:
           echo "Deploy target: ${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}"
           echo "Remote directory will be created with mkdir -p if missing."
 
+          # Normalize SSH_PORT: secret may be set but invalid (e.g. blank text),
+          # which breaks ${SSH_PORT:-22} because the var is non-empty.
+          # Use DEPLOY_SSH_PORT so job-level env SSH_PORT cannot override it.
+          port="${SSH_PORT:-22}"
+          if ! [[ "$port" =~ ^[0-9]+$ ]] || [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
+            echo "SSH_PORT is invalid; using default 22"
+            port=22
+          else
+            echo "SSH_PORT ok"
+          fi
+          echo "DEPLOY_SSH_PORT=$port" >> "$GITHUB_ENV"
+
       - name: Configure SSH key
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
-          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
-          printf 'Host *\n  IdentityFile ~/.ssh/id_ed25519\n  IdentitiesOnly yes\n  StrictHostKeyChecking accept-new\n' > ~/.ssh/config
+          # Support ed25519 or RSA private keys from SSH_KEY secret.
+          key_file=~/.ssh/id_deploy
+          printf '%s\n' "$SSH_KEY" > "$key_file"
+          # Fix Windows-style CRLF if the secret was pasted from a Windows editor.
+          sed -i 's/\r$//' "$key_file"
+          chmod 600 "$key_file"
+          printf 'Host *\n  IdentityFile %s\n  IdentitiesOnly yes\n  StrictHostKeyChecking accept-new\n' "$key_file" > ~/.ssh/config
           chmod 600 ~/.ssh/config
-          port="${SSH_PORT:-22}"
-          ssh-keyscan -p "$port" "$SSH_HOST" >> ~/.ssh/known_hosts
+          ssh-keyscan -p "$DEPLOY_SSH_PORT" "$SSH_HOST" >> ~/.ssh/known_hosts
 
       - name: Ensure remote deploy directory
         run: |
           set -euo pipefail
-          port="${SSH_PORT:-22}"
           echo "Creating remote path if needed: ${DEPLOY_PATH}"
-          ssh -p "$port" "${SSH_USER}@${SSH_HOST}" "mkdir -p '${DEPLOY_PATH}' && ls -ld '${DEPLOY_PATH}'"
+          ssh -p "$DEPLOY_SSH_PORT" "${SSH_USER}@${SSH_HOST}" "mkdir -p '${DEPLOY_PATH}' && ls -ld '${DEPLOY_PATH}'"
 
       - name: Sync project to server
         run: |
           set -euo pipefail
-          port="${SSH_PORT:-22}"
 
           # Sync ONLY the app tree into a dedicated directory.
           # No --delete (safer after the previous wipe incident).
           rsync -az \
-            -e "ssh -p ${port}" \
+            -e "ssh -p ${DEPLOY_SSH_PORT}" \
             --exclude ".git/" \
             --exclude "node_modules/" \
             --exclude "dist/" \
@@ -167,8 +180,7 @@ jobs:
       - name: Build and restart service on server
         run: |
           set -euo pipefail
-          port="${SSH_PORT:-22}"
-          ssh -p "$port" "${SSH_USER}@${SSH_HOST}" \
+          ssh -p "$DEPLOY_SSH_PORT" "${SSH_USER}@${SSH_HOST}" \
             DEPLOY_PATH="$DEPLOY_PATH" \
             DEPLOY_RESTART_CMD="$DEPLOY_RESTART_CMD" \
             bash -s <<'EOF'
