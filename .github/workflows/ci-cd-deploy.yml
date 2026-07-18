@@ -66,21 +66,27 @@ jobs:
        github.event.inputs.confirm_deploy == 'deploy') ||
       (github.event_name == 'repository_dispatch' &&
        github.event.action == 'deploy')
+    env:
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_PORT: ${{ secrets.SSH_PORT }}
+      SSH_KEY: ${{ secrets.SSH_KEY }}
+      # Secret → Variable → safe default (same as scripts/bootstrap-server.sh).
+      # Missing secret must not block deploy; remote dir is created via mkdir -p.
+      DEPLOY_PATH: ${{ secrets.DEPLOY_PATH || vars.DEPLOY_PATH || '/var/www/fpaudit.by' }}
+      DEPLOY_RESTART_CMD: ${{ secrets.DEPLOY_RESTART_CMD }}
+      DEPLOY_PATH_SECRET_SET: ${{ secrets.DEPLOY_PATH != '' }}
+      DEPLOY_PATH_VAR_SET: ${{ vars.DEPLOY_PATH != '' }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Validate deploy secrets
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_KEY: ${{ secrets.SSH_KEY }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
           set -euo pipefail
           missing=0
-          for name in SSH_HOST SSH_USER SSH_KEY DEPLOY_PATH; do
+          for name in SSH_HOST SSH_USER SSH_KEY; do
             if [ -z "${!name}" ]; then
               echo "Missing required secret: $name"
               missing=1
@@ -88,6 +94,15 @@ jobs:
           done
           if [ "$missing" -ne 0 ]; then
             exit 1
+          fi
+
+          if [ "${DEPLOY_PATH_SECRET_SET}" = "true" ]; then
+            echo "DEPLOY_PATH source: repository secret"
+          elif [ "${DEPLOY_PATH_VAR_SET}" = "true" ]; then
+            echo "DEPLOY_PATH source: repository variable"
+          else
+            echo "DEPLOY_PATH source: workflow default (/var/www/fpaudit.by)"
+            echo "Tip: set Actions secret or variable DEPLOY_PATH to override."
           fi
 
           # Refuse empty / relative / filesystem-root targets.
@@ -107,12 +122,9 @@ jobs:
             exit 1
           fi
           echo "Deploy target: ${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}"
+          echo "Remote directory will be created with mkdir -p if missing."
 
       - name: Configure SSH key
-        env:
-          SSH_KEY: ${{ secrets.SSH_KEY }}
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
         run: |
           set -euo pipefail
           mkdir -p ~/.ssh
@@ -124,22 +136,13 @@ jobs:
           ssh-keyscan -p "$port" "$SSH_HOST" >> ~/.ssh/known_hosts
 
       - name: Ensure remote deploy directory
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
           set -euo pipefail
           port="${SSH_PORT:-22}"
-          ssh -p "$port" "${SSH_USER}@${SSH_HOST}" "mkdir -p '${DEPLOY_PATH}'"
+          echo "Creating remote path if needed: ${DEPLOY_PATH}"
+          ssh -p "$port" "${SSH_USER}@${SSH_HOST}" "mkdir -p '${DEPLOY_PATH}' && ls -ld '${DEPLOY_PATH}'"
 
       - name: Sync project to server
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
         run: |
           set -euo pipefail
           port="${SSH_PORT:-22}"
@@ -162,12 +165,6 @@ jobs:
             "${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/"
 
       - name: Build and restart service on server
-        env:
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          DEPLOY_RESTART_CMD: ${{ secrets.DEPLOY_RESTART_CMD }}
         run: |
           set -euo pipefail
           port="${SSH_PORT:-22}"
