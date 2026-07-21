@@ -194,10 +194,12 @@ jobs:
       - name: Build and restart service on server
         run: |
           set -euo pipefail
+          remote_env="DEPLOY_PATH=$(printf '%q' "$DEPLOY_PATH")"
+          if [ -n "${DEPLOY_RESTART_CMD:-}" ]; then
+            remote_env="$remote_env DEPLOY_RESTART_CMD=$(printf '%q' "$DEPLOY_RESTART_CMD")"
+          fi
           ssh -p "$DEPLOY_SSH_PORT" "${SSH_USER}@${SSH_HOST}" \
-            DEPLOY_PATH="$DEPLOY_PATH" \
-            DEPLOY_RESTART_CMD="$DEPLOY_RESTART_CMD" \
-            bash -s <<'EOF'
+            "$remote_env bash -s" <<'EOF'
           set -euo pipefail
           echo "Using DEPLOY_PATH=$DEPLOY_PATH"
           cd "$DEPLOY_PATH"
@@ -243,7 +245,9 @@ jobs:
           systemctl --no-pager --full status fpa-mobile-web || true
           curl -fsS "http://127.0.0.1:8000/api/health" || true
 
-          if [ -n "${DEPLOY_RESTART_CMD:-}" ]; then
-            eval "$DEPLOY_RESTART_CMD"
-          fi
+          restart_cmd="${DEPLOY_RESTART_CMD:-}"
+          case "$restart_cmd" in
+            ''|'skip'|'skip restart'|'none') ;;
+            *) eval "$restart_cmd" ;;
+          esac
           EOF
