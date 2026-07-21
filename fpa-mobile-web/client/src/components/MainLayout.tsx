@@ -6,6 +6,7 @@ import type { PriceLookupPreset, PrintDraft, TabId } from '../types';
 import { AiAssistantPanel } from './AiAssistantPanel';
 import { AnalyticsPanel } from './AnalyticsPanel';
 import { BottomNav } from './BottomNav';
+import { CalendarPanel } from './CalendarPanel';
 import { HomePanel } from './HomePanel';
 import { PricePanel } from './PricePanel';
 import { PrintPanel } from './PrintPanel';
@@ -24,6 +25,7 @@ const TITLES: Record<TabId, string> = {
   productSearch: 'Поиск по фото',
   aiAssistant: 'AI Assistant',
   analytics: 'Аналитика',
+  calendar: 'Календарь',
 };
 
 export function MainLayout() {
@@ -125,6 +127,13 @@ export function MainLayout() {
         {tab === 'profile' && <SettingsPanel />}
         {tab === 'aiAssistant' && <AiAssistantPanel />}
         {tab === 'analytics' && <AnalyticsPanel />}
+        {tab === 'calendar' && (
+          <CalendarPanel
+            onImportPrintTask={(session) => printSession.replaceSession(session)}
+            onGoPrint={() => setTab('print')}
+            sap={session?.sap}
+          />
+        )}
       </main>
       <BottomNav active={tab} onChange={handleTabChange} />
     </section>
