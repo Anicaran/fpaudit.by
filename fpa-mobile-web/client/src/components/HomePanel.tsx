@@ -14,6 +14,7 @@ export function HomePanel({ onNavigate }: Props) {
 
   const shortcuts = [
     { tab: 'tasks' as TabId, title: 'Задачи', desc: 'Список и выполнение', emoji: '📋' },
+    { tab: 'calendar' as TabId, title: 'Календарь', desc: 'Дедлайны задач по дням', emoji: '📅' },
     { tab: 'tags' as TabId, title: 'Ценики', desc: 'Инфо и поиск по фото', emoji: '🏷' },
     { tab: 'productSearch' as TabId, title: 'Поиск по фото', desc: 'Открыть вкладку поиска товара', emoji: '📷' },
     { tab: 'aiAssistant' as TabId, title: 'AI Assistant', desc: 'Чат-помощник', emoji: '🤖' },

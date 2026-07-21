@@ -166,7 +166,8 @@ export type TabId =
   | 'profile'
   | 'productSearch'
   | 'aiAssistant'
-  | 'analytics';
+  | 'analytics'
+  | 'calendar';
 
 export interface ProductSearchResult {
   product_id?: number;
