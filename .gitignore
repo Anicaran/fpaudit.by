@@ -18,6 +18,7 @@ dist/
 # Local runtime files
 certs/
 *.log
+content-factory/server/data/
 
 # SSH keys / secrets — never commit
 fpaudit_actions_key

@@ -10,6 +10,7 @@
 | Папка | Назначение |
 |-------|------------|
 | [`fpa-mobile-web/`](fpa-mobile-web/) | Основное web-приложение (React + FastAPI proxy) |
+| [`content-factory/`](content-factory/) | КонтентЗавод — MVP конвейера контента (идеи → ревью → календарь) |
 | [`apk-ref/`](apk-ref/) | Быстрый справочник по APK/API контрактам |
 | [`fixprice-site/`](fixprice-site/) | Модуль загрузки изображений товаров с публичного сайта Fix Price |
 

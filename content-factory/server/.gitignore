@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+data/factory.json
+data/*.tmp
+../client/node_modules/
+../client/dist/
+.env
+.DS_Store
