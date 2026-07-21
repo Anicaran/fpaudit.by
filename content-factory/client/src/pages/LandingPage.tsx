@@ -4,28 +4,28 @@ import { SiteNav } from '../components/SiteNav';
 const steps = [
   {
     n: '01',
-    title: 'Сигналы',
-    text: 'Тренды, RSS и Telegram-источники собирают сырьё под вашу нишу.',
+    title: 'Сбор и анализ',
+    text: 'Завод собирает сигналы по нише и разбирает, что стоит превратить в ролик.',
   },
   {
     n: '02',
-    title: 'Идеи',
-    text: 'Агенты предлагают углы и раскладывают их по столпам контента бренда.',
+    title: 'Сценарий',
+    text: 'Сам пишет хук, сцены, CTA и тексты под площадки — в голосе вашего бренда.',
   },
   {
     n: '03',
-    title: 'Черновик',
-    text: 'Исследование → текст → адаптация под Telegram, VK, блог, Reels и рассылку.',
+    title: 'Озвучка',
+    text: 'Сам озвучивает сценарий (edge-tts / fallback) и готовит дорожку.',
   },
   {
     n: '04',
-    title: 'Ревью',
-    text: 'Human-in-the-loop: вы одобряете, правите или отклоняете перед выходом.',
+    title: 'Визуал',
+    text: 'Сам рисует вертикальные кадры под каждую сцену.',
   },
   {
     n: '05',
-    title: 'Календарь',
-    text: 'Публикация по расписанию. Завод работает, пока вы занимаетесь бизнесом.',
+    title: 'Сборка',
+    text: 'Сам монтирует mp4 через ffmpeg и отдаёт ролик на ревью.',
   },
 ];
 
@@ -35,22 +35,26 @@ export function LandingPage() {
       <SiteNav />
       <section className="hero">
         <div className="container hero-content">
-          <p className="mono">конвейер контента · mvp 0.1</p>
+          <p className="mono">видеоконвейер · mvp 0.2</p>
           <h1 className="display">
             Контент
             <br />
             Завод
           </h1>
           <p>
-            Система, которая сама находит темы, пишет материалы, адаптирует их под площадки и
-            публикует по календарю — с вашим голосом бренда и контролем качества.
+            Сам собирает и анализирует контент, сам пишет сценарий, сам озвучивает, сам делает
+            визуал и сам собирает готовый ролик — вы только утверждаете.
           </p>
           <div className="hero-actions">
             <Link className="btn btn-signal" to="/app">
               Запустить кабинет
             </Link>
-            <a className="btn btn-secondary" href="#pipeline" style={{ color: 'var(--paper)', borderColor: 'rgba(243,239,228,0.35)' }}>
-              Как устроен пайплайн
+            <a
+              className="btn btn-secondary"
+              href="#pipeline"
+              style={{ color: 'var(--paper)', borderColor: 'rgba(243,239,228,0.35)' }}
+            >
+              Как собирается ролик
             </a>
           </div>
         </div>
@@ -58,27 +62,26 @@ export function LandingPage() {
 
       <div className="strip">
         <div className="strip-track" aria-hidden="true">
-          <span>Telegram</span>
-          <span>VK</span>
-          <span>Блог / SEO</span>
-          <span>Reels & Shorts</span>
-          <span>Рассылка</span>
-          <span>Human-in-the-loop</span>
-          <span>Telegram</span>
-          <span>VK</span>
-          <span>Блог / SEO</span>
-          <span>Reels & Shorts</span>
-          <span>Рассылка</span>
-          <span>Human-in-the-loop</span>
+          <span>Анализ</span>
+          <span>Сценарий</span>
+          <span>Озвучка</span>
+          <span>Визуал</span>
+          <span>Сборка mp4</span>
+          <span>Ревью</span>
+          <span>Анализ</span>
+          <span>Сценарий</span>
+          <span>Озвучка</span>
+          <span>Визуал</span>
+          <span>Сборка mp4</span>
+          <span>Ревью</span>
         </div>
       </div>
 
       <section className="section" id="pipeline">
         <div className="container">
-          <h2 className="display">Один поток — пять этапов</h2>
+          <h2 className="display">Полный видеозавод</h2>
           <p className="section-lead">
-            Архитектура как у рабочих content factory: специализированные стадии, общий статус и
-            гейт модерации перед публикацией.
+            Не только тексты: от сырья до вертикального ролика в одном пайплайне.
           </p>
           <div className="pipeline-track">
             {steps.map((step) => (
@@ -96,23 +99,22 @@ export function LandingPage() {
         <div className="container panel">
           <div className="panel-head">
             <h2 className="display" style={{ fontSize: '2rem' }}>
-              Собран по образцу успешных заводов
+              Что на выходе
             </h2>
           </div>
           <p style={{ marginTop: 0, color: 'var(--muted)', maxWidth: '46rem' }}>
-            Взяли рабочие паттерны из ContentPulse, FITTIN Контентзавод и multi-agent пайплайнов:
-            сбор сигналов, генерация идей, бриф, мультиканальные черновики, score качества и
-            календарь публикаций. API-ключи опциональны — stub-адаптеры дают полный демо-цикл
-            сразу после запуска.
+            Готовый mp4 (1080×1920), озвучка, кадры сцен, тексты для Telegram/VK/блога и очередь
+            модерации. Без API-ключей завод работает на stub/локальных движках; с OpenRouter и
+            edge-tts — на живой генерации.
           </p>
           <Link className="btn" to="/app/review">
-            Перейти к очереди ревью
+            Открыть очередь роликов
           </Link>
         </div>
       </section>
 
       <footer className="footer">
-        <div className="container mono">КонтентЗавод · часть экосистемы Molly Web Studio</div>
+        <div className="container mono">КонтентЗавод · видеоконвейер Molly Web Studio</div>
       </footer>
     </div>
   );

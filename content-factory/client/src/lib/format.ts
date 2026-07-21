@@ -2,13 +2,18 @@ import type { JobStatus } from './types';
 
 export const STATUS_LABEL: Record<JobStatus, string> = {
   idea: 'Идея',
-  researching: 'Исследование',
-  drafting: 'Черновик',
-  adapting: 'Адаптация',
+  analyzing: 'Анализ',
+  scripting: 'Сценарий',
+  voicing: 'Озвучка',
+  visualizing: 'Визуал',
+  assembling: 'Сборка',
   review: 'На ревью',
   scheduled: 'В календаре',
   published: 'Опубликовано',
   rejected: 'Отклонено',
+  researching: 'Исследование',
+  drafting: 'Черновик',
+  adapting: 'Адаптация',
 };
 
 export const CHANNEL_LABEL: Record<string, string> = {

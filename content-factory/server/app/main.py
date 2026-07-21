@@ -24,10 +24,11 @@ CLIENT_DIST = Path(__file__).resolve().parents[2] / "client" / "dist"
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
     store.ensure_db()
+    store.MEDIA_DIR.mkdir(parents=True, exist_ok=True)
     yield
 
 
-app = FastAPI(title="КонтентЗавод API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="КонтентЗавод API", version="0.2.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -36,10 +37,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+store.MEDIA_DIR.mkdir(parents=True, exist_ok=True)
+app.mount("/media", StaticFiles(directory=store.MEDIA_DIR), name="media")
+
 
 @app.get("/api/health")
 def health() -> dict:
-    return {"ok": True, "service": "content-factory"}
+    return {"ok": True, "service": "content-factory", "video_pipeline": True}
 
 
 @app.get("/api/dashboard")

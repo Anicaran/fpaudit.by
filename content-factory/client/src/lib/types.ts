@@ -2,13 +2,18 @@ export type Channel = 'telegram' | 'vk' | 'blog' | 'reels' | 'newsletter';
 
 export type JobStatus =
   | 'idea'
-  | 'researching'
-  | 'drafting'
-  | 'adapting'
+  | 'analyzing'
+  | 'scripting'
+  | 'voicing'
+  | 'visualizing'
+  | 'assembling'
   | 'review'
   | 'scheduled'
   | 'published'
-  | 'rejected';
+  | 'rejected'
+  | 'researching'
+  | 'drafting'
+  | 'adapting';
 
 export interface BrandProfile {
   id: string;
@@ -49,6 +54,30 @@ export interface ChannelDraft {
   meta_description?: string | null;
 }
 
+export interface ScriptScene {
+  index: number;
+  title: string;
+  narration: string;
+  on_screen_text: string;
+  visual_prompt: string;
+}
+
+export interface VideoPackage {
+  analysis: string;
+  script_title: string;
+  hook: string;
+  cta: string;
+  scenes: ScriptScene[];
+  full_narration: string;
+  voice_url?: string | null;
+  frame_urls: string[];
+  video_url?: string | null;
+  duration_sec?: number | null;
+  voice_engine: string;
+  visual_engine: string;
+  assembler: string;
+}
+
 export interface ContentJob {
   id: string;
   brand_id: string;
@@ -57,6 +86,7 @@ export interface ContentJob {
   status: JobStatus;
   research_brief: string;
   drafts: ChannelDraft[];
+  video?: VideoPackage | null;
   quality_score?: number | null;
   scheduled_at?: string | null;
   published_at?: string | null;
@@ -72,6 +102,7 @@ export interface DashboardStats {
   scheduled: number;
   published_this_week: number;
   avg_quality: number | null;
+  videos_ready: number;
 }
 
 export interface PipelineEvent {

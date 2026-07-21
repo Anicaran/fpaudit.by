@@ -1,16 +1,15 @@
 # КонтентЗавод
 
-MVP контент-завода: конвейер от сигналов и идей до мультиканальных черновиков, ревью и календаря публикаций.
+Видеоконвейер: **сбор/анализ → сценарий → озвучка → визуал → сборка mp4 → ревью → календарь**.
 
-Ориентиры: [ContentPulse](https://github.com/snehilmodani/ContentPulse), FITTIN «Контентзавод», multi-agent пайплайны (research → draft → adapt → approve → publish).
+## Пайплайн ролика
 
-## Что умеет
-
-- **Профиль бренда** — ниша, аудитория, голос, столпы контента
-- **Сбор идей** — stub-тренды (или OpenRouter, если задан ключ)
-- **Пайплайн** — исследование → черновик → адаптация под Telegram / VK / блог / Reels / рассылку
-- **Quality score** и очередь **human-in-the-loop**
-- **Календарь** и stub-publisher по расписанию
+1. **Анализ** — собирает сигналы по нише и формирует редакционный бриф  
+2. **Сценарий** — пишет хук, сцены, CTA и тексты под площадки  
+3. **Озвучка** — `edge-tts` (ru-RU-DmitryNeural) или ffmpeg-fallback  
+4. **Визуал** — вертикальные кадры 1080×1920 (Pillow)  
+5. **Сборка** — `ffmpeg` склеивает кадры + голос в `final.mp4`  
+6. **Ревью** — human-in-the-loop, календарь, stub-публикация  
 
 ## Стек
 
@@ -18,52 +17,38 @@ MVP контент-завода: конвейер от сигналов и ид�
 |------|------------|
 | Frontend | React 19, Vite, React Router |
 | Backend | FastAPI |
-| Хранение | JSON-файл (`server/data/factory.json`) |
-| AI | Stub-адаптеры + опционально OpenRouter |
+| Media | Pillow, edge-tts, ffmpeg |
+| Storage | JSON + файлы в `server/data/media/` |
 
 ## Запуск
 
-### Backend
+Нужны `ffmpeg` / `ffprobe` в системе.
 
 ```bash
+# backend
 cd content-factory/server
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
-```
 
-### Frontend
-
-```bash
+# frontend
 cd content-factory/client
-npm install
-npm run dev
+npm install && npm run dev
 ```
 
-Откройте http://localhost:5174 — Vite проксирует `/api` на порт `8001`.
+Откройте http://localhost:5174
 
-### Опционально: живой LLM
+В кабинете: **Идеи → В производство** — завод сам соберёт ролик и положит его в **Ревью**.
+
+### Опционально
 
 ```bash
-export OPENROUTER_API_KEY=sk-or-...
-export OPENROUTER_MODEL=openai/gpt-4o-mini
+export OPENROUTER_API_KEY=sk-or-...   # живые идеи
+# edge-tts использует сеть Microsoft; без сети включится локальный fallback-голос
 ```
 
-Без ключа завод полностью работает на детерминированных stub-адаптерах.
+## API
 
-## API (кратко)
-
-- `GET /api/dashboard` — метрики, задания, события
-- `GET/PATCH /api/brand` — профиль бренда
-- `POST /api/ideas/generate` — сбор сигналов + идеи
-- `POST /api/ideas/{id}/approve` → затем `POST /api/jobs` запускает пайплайн
-- `POST /api/jobs/{id}/approve` — опубликовать или запланировать
-- `POST /api/publisher/tick` — опубликовать due-задания
-
-## Дальше
-
-1. Реальные коннекторы источников (RSS / Telegram)
-2. Очередь воркеров (BullMQ / Celery) вместо синхронного пайплайна
-3. Публикация в CMS и соцсети через официальные API
-4. Аналитика охватов и петля улучшения голоса бренда
+- `POST /api/jobs` — запуск полного видеопайплайна из идеи  
+- `GET /api/jobs/{id}` — пакет с `video.video_url`, кадрами и сценами  
+- Медиа: `/media/jobs/{id}/final.mp4`, `voice.mp3`, `frames/*.png`

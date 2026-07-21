@@ -3,12 +3,21 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from . import ai
-from .models import ContentJob, Idea, JobStatus
+from . import media_assemble, media_script, media_visual, media_voice
+from .models import Channel, ContentJob, Idea, JobStatus, VideoPackage
 from . import store
 
 
 def _now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+
+
+def _set_status(job: ContentJob, status: JobStatus, message: str) -> ContentJob:
+    job.status = status
+    job.updated_at = _now()
+    store.upsert_job(job)
+    store.append_event(job.id, status, message)
+    return job
 
 
 def harvest_and_ideate(count: int = 5) -> list[Idea]:
@@ -70,6 +79,7 @@ def create_job_from_idea(idea_id: str) -> ContentJob:
 
 
 def run_pipeline(job_id: str) -> ContentJob:
+    """Полный завод: анализ → текст → озвучка → визуал → сборка."""
     job = store.get_job(job_id)
     if not job:
         raise ValueError("Задание не найдено")
@@ -77,37 +87,61 @@ def run_pipeline(job_id: str) -> ContentJob:
     if not idea:
         raise ValueError("Идея задания не найдена")
     brand = store.get_brand()
+    sources = store.list_sources()
+    media_root = store.MEDIA_DIR
+    job_dir = media_script.job_media_dir(media_root, job.id)
 
-    job.status = JobStatus.RESEARCHING
-    job.updated_at = _now()
-    store.upsert_job(job)
-    store.append_event(job.id, JobStatus.RESEARCHING, "Сбор брифа и фактуры")
-    job.research_brief = ai.research_brief(brand, idea)
+    # 1) Collect + analyze
+    _set_status(job, JobStatus.ANALYZING, "Сбор и анализ контента / сигналов")
+    analysis = media_script.analyze_sources(brand, idea, sources)
+    job.research_brief = analysis
 
-    job.status = JobStatus.DRAFTING
-    job.updated_at = _now()
-    store.upsert_job(job)
-    store.append_event(job.id, JobStatus.DRAFTING, "Черновик основного материала")
-
-    job.status = JobStatus.ADAPTING
-    job.updated_at = _now()
-    store.upsert_job(job)
-    store.append_event(job.id, JobStatus.ADAPTING, "Адаптация под каналы")
-    channels = list(brand.channels)
-    if not channels:
-        from .models import Channel
-
-        channels = [Channel.TELEGRAM, Channel.BLOG]
-    job.drafts = ai.draft_for_channels(brand, idea, job.research_brief, channels)
+    # 2) Write script + channel drafts
+    _set_status(job, JobStatus.SCRIPTING, "Написание сценария и текстов")
+    script_title, hook, cta, scenes, narration = media_script.build_video_script(
+        brand, idea, analysis
+    )
+    channels = list(brand.channels) or [Channel.TELEGRAM, Channel.BLOG, Channel.REELS]
+    job.drafts = ai.draft_for_channels(brand, idea, analysis, channels)
     job.quality_score = ai.score_quality(job.drafts, brand)
 
-    job.status = JobStatus.REVIEW
-    job.updated_at = _now()
-    store.upsert_job(job)
-    store.append_event(
-        job.id,
+    video = VideoPackage(
+        analysis=analysis,
+        script_title=script_title,
+        hook=hook,
+        cta=cta,
+        scenes=scenes,
+        full_narration=narration,
+    )
+
+    # 3) Voiceover
+    _set_status(job, JobStatus.VOICING, "Озвучка сценария")
+    voice_path = job_dir / "voice.mp3"
+    video.voice_engine = media_voice.synthesize_voice(narration, voice_path)
+    video.voice_url = f"/media/jobs/{job.id}/voice.mp3"
+
+    # 4) Visual frames
+    _set_status(job, JobStatus.VISUALIZING, "Генерация визуальных кадров")
+    frames_dir = job_dir / "frames"
+    frame_paths, visual_engine = media_visual.render_scene_frames(
+        brand, scenes, frames_dir, hook
+    )
+    video.visual_engine = visual_engine
+    video.frame_urls = [f"/media/jobs/{job.id}/frames/{p.name}" for p in frame_paths]
+
+    # 5) Assemble mp4
+    _set_status(job, JobStatus.ASSEMBLING, "Сборка видео")
+    out_mp4 = job_dir / "final.mp4"
+    duration, assembler = media_assemble.assemble_video(frame_paths, voice_path, out_mp4)
+    video.assembler = assembler
+    video.duration_sec = round(duration, 2)
+    video.video_url = f"/media/jobs/{job.id}/final.mp4"
+    job.video = video
+
+    _set_status(
+        job,
         JobStatus.REVIEW,
-        f"Готово к модерации (quality={job.quality_score})",
+        f"Ролик собран ({video.duration_sec}s, quality={job.quality_score})",
     )
     return job
 

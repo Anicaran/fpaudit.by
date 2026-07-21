@@ -79,6 +79,10 @@ export function OverviewPage() {
             <span>avg quality</span>
             <strong>{stats.avg_quality ?? '—'}</strong>
           </div>
+          <div className="stat">
+            <span>ролики готовы</span>
+            <strong>{stats.videos_ready ?? 0}</strong>
+          </div>
         </div>
       </section>
 

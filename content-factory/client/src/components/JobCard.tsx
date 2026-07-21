@@ -19,6 +19,8 @@ export function JobCard({ job, onApprove, onReject, onRerun, busy }: Props) {
           ? 'badge badge-rejected'
           : 'badge';
 
+  const video = job.video;
+
   return (
     <article className="item">
       <div className="item-top">
@@ -30,10 +32,52 @@ export function JobCard({ job, onApprove, onReject, onRerun, busy }: Props) {
         </div>
         <span className={badgeClass}>{STATUS_LABEL[job.status]}</span>
       </div>
-      {job.research_brief ? <p>{job.research_brief}</p> : null}
+
+      {video?.video_url ? (
+        <div className="video-block">
+          <video className="video-player" controls playsInline src={video.video_url} />
+          <div className="video-meta mono">
+            <span>{video.duration_sec ?? '—'}s</span>
+            <span>{video.voice_engine}</span>
+            <span>{video.visual_engine}</span>
+            <span>{video.assembler}</span>
+          </div>
+          {video.frame_urls?.length ? (
+            <div className="frame-strip">
+              {video.frame_urls.map((url) => (
+                <img key={url} src={url} alt="Кадр ролика" />
+              ))}
+            </div>
+          ) : null}
+          {video.scenes?.length ? (
+            <div className="scene-list">
+              {video.scenes.map((scene) => (
+                <div className="scene" key={`${job.id}-s-${scene.index}`}>
+                  <strong className="mono">
+                    {String(scene.index + 1).padStart(2, '0')} · {scene.title}
+                  </strong>
+                  <p>{scene.narration}</p>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {video.voice_url ? (
+            <audio controls src={video.voice_url} style={{ width: '100%' }} />
+          ) : null}
+        </div>
+      ) : null}
+
+      {job.research_brief ? (
+        <details>
+          <summary className="mono">анализ источников</summary>
+          <pre className="brief">{job.research_brief}</pre>
+        </details>
+      ) : null}
+
       {typeof job.quality_score === 'number' ? (
         <p className="mono">quality score: {job.quality_score}</p>
       ) : null}
+
       {job.drafts?.length ? (
         <div className="draft-grid">
           {job.drafts.map((draft) => (
@@ -44,6 +88,7 @@ export function JobCard({ job, onApprove, onReject, onRerun, busy }: Props) {
           ))}
         </div>
       ) : null}
+
       {(onApprove || onReject || onRerun) && (
         <div className="item-actions">
           {onApprove ? (
@@ -58,7 +103,7 @@ export function JobCard({ job, onApprove, onReject, onRerun, busy }: Props) {
           ) : null}
           {onRerun ? (
             <button className="btn btn-secondary" disabled={busy} onClick={onRerun}>
-              Пересобрать
+              Пересобрать ролик
             </button>
           ) : null}
           {onReject ? (

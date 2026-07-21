@@ -16,13 +16,19 @@ class Channel(str, Enum):
 
 class JobStatus(str, Enum):
     IDEA = "idea"
-    RESEARCHING = "researching"
-    DRAFTING = "drafting"
-    ADAPTING = "adapting"
+    ANALYZING = "analyzing"
+    SCRIPTING = "scripting"
+    VOICING = "voicing"
+    VISUALIZING = "visualizing"
+    ASSEMBLING = "assembling"
     REVIEW = "review"
     SCHEDULED = "scheduled"
     PUBLISHED = "published"
     REJECTED = "rejected"
+    # legacy aliases kept for old seeded rows
+    RESEARCHING = "researching"
+    DRAFTING = "drafting"
+    ADAPTING = "adapting"
 
 
 class BrandProfile(BaseModel):
@@ -50,7 +56,7 @@ class SourceItem(BaseModel):
     id: str
     title: str
     url: str | None = None
-    kind: str = "manual"  # rss | telegram | trend | manual
+    kind: str = "manual"
     snippet: str = ""
     score: float = 0.7
 
@@ -62,7 +68,7 @@ class Idea(BaseModel):
     angle: str
     pillar: str
     score: float
-    status: str = "pending"  # pending | approved | rejected
+    status: str = "pending"
 
 
 class ChannelDraft(BaseModel):
@@ -74,6 +80,30 @@ class ChannelDraft(BaseModel):
     meta_description: str | None = None
 
 
+class ScriptScene(BaseModel):
+    index: int
+    title: str
+    narration: str
+    on_screen_text: str
+    visual_prompt: str = ""
+
+
+class VideoPackage(BaseModel):
+    analysis: str = ""
+    script_title: str = ""
+    hook: str = ""
+    cta: str = ""
+    scenes: list[ScriptScene] = Field(default_factory=list)
+    full_narration: str = ""
+    voice_url: str | None = None
+    frame_urls: list[str] = Field(default_factory=list)
+    video_url: str | None = None
+    duration_sec: float | None = None
+    voice_engine: str = ""
+    visual_engine: str = ""
+    assembler: str = ""
+
+
 class ContentJob(BaseModel):
     id: str
     brand_id: str
@@ -82,6 +112,7 @@ class ContentJob(BaseModel):
     status: JobStatus
     research_brief: str = ""
     drafts: list[ChannelDraft] = Field(default_factory=list)
+    video: VideoPackage | None = None
     quality_score: float | None = None
     scheduled_at: str | None = None
     published_at: str | None = None
@@ -109,6 +140,7 @@ class DashboardStats(BaseModel):
     scheduled: int
     published_this_week: int
     avg_quality: float | None
+    videos_ready: int = 0
 
 
 class PipelineEvent(BaseModel):

@@ -19,6 +19,7 @@ from .models import (
 )
 
 DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+MEDIA_DIR = DATA_DIR / "media"
 DB_PATH = DATA_DIR / "factory.json"
 _lock = threading.RLock()
 
@@ -350,6 +351,11 @@ def dashboard_stats() -> dict[str, Any]:
             for j in jobs
             if j.status
             in {
+                JobStatus.ANALYZING,
+                JobStatus.SCRIPTING,
+                JobStatus.VOICING,
+                JobStatus.VISUALIZING,
+                JobStatus.ASSEMBLING,
                 JobStatus.RESEARCHING,
                 JobStatus.DRAFTING,
                 JobStatus.ADAPTING,
@@ -359,4 +365,5 @@ def dashboard_stats() -> dict[str, Any]:
         "scheduled": sum(1 for j in jobs if j.status == JobStatus.SCHEDULED),
         "published_this_week": len(published),
         "avg_quality": round(sum(qualities) / len(qualities), 2) if qualities else None,
+        "videos_ready": sum(1 for j in jobs if j.video and j.video.video_url),
     }

@@ -42,7 +42,7 @@ export function IdeasPage() {
       await api.approveIdea(id);
       const job = await api.createJob(id);
       await load();
-      setToast(`Пайплайн завершён → ревью (${job.id})`);
+      setToast(`Ролик собран → ревью (${job.id})`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Не удалось запустить');
     } finally {
