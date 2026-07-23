@@ -37,6 +37,4 @@ androguard.db
 _apk_dex/
 _apk_extract/
 _xapk_extract/
-
-# Optional local extracts (uncomment if needed)
-# android-app-extract/
+android-app-extract/
